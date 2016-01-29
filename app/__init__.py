@@ -29,7 +29,7 @@ def create_logger():
         'loggers': {
             '': {
                 'handlers': ['console', 'file'],
-                'level': 'DEBUG'
+                'level': 'INFO'
             }
         }
     })

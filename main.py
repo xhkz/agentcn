@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from gevent import monkey
 
-from crawler import Crawler
-from sniffer import Sniffer
+from app.crawler import Crawler
+from app.sniffer import Sniffer
+
+monkey.patch_all()
 
 
 def main():
     proxies = Crawler.run()
-
     Sniffer(proxies).verify()
 
 

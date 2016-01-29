@@ -1,4 +1,4 @@
 beautifulsoup4
-html5lib
+lxml
 requests
 gevent

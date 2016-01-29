@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import gevent
 
-from app import logger
 from proxy import Site
 
 
@@ -10,11 +10,18 @@ class Crawler(object):
         pass
 
     @staticmethod
+    def _run(site):
+        return site().fetch()
+
+    @staticmethod
     def run():
         ip_list = []
-        for proxy in Site.__subclasses__():
-            ips = proxy().fetch()
-            ip_list.extend(ips)
-            logger.info('Get %s ip addresses from %s', len(ips), proxy)
+        sites = Site.__subclasses__()
+
+        jobs = [gevent.spawn(Crawler._run, site) for site in sites]
+        gevent.joinall(jobs)
+
+        for job in jobs:
+            ip_list.extend(job.value)
 
         return ip_list

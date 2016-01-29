@@ -1,48 +1,44 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import multiprocessing
+
+from multiprocessing import Queue, Process, cpu_count
 
 import gevent
 import requests
-from gevent import monkey
 
 from app import logger
 from settings import config
-
-monkey.patch_all()
 
 
 class Validator(object):
     def __init__(self):
         self.target = config['target']
         self.timeout = config['timeout']
-        self.process_num = config['process_num']
         self.thread_num = config['thread_num']
 
     def run(self, proxies):
-        q = multiprocessing.Queue()
-        size = len(proxies) / self.process_num + 1
-        chunks = self.slice(proxies, size)
+        q = Queue()
+        chunks = self.slice(proxies, len(proxies) / cpu_count() + 1)
         process = []
 
         for chunk in chunks:
-            p = multiprocessing.Process(target=self.proc, args=(q, chunk))
+            p = Process(target=self.proc, args=(q, chunk))
             p.start()
             process.append(p)
 
         result = {}
+        for _ in process:
+            result.update(q.get())
+
         for p in process:
             p.join()
-            result.update(q.get())
 
         return result
 
-    def slice(self, proxies, size):
-        if proxies:
-            return [proxies[i:i + size] for i in range(0, len(proxies), size)]
-
-        return []
+    @staticmethod
+    def slice(items, num):
+        return [items[i:i + num] for i in range(0, len(items), num)]
 
     def proc(self, q, proxies):
         jobs = [gevent.spawn(self.validate, proxies) for _ in range(self.thread_num)]
@@ -56,15 +52,22 @@ class Validator(object):
 
     def validate(self, proxies):
         result = {}
-        while len(proxies) > 0:
+        while proxies:
             proxy = proxies.pop()
-            try:
-                r = requests.get(self.target, proxies={"http": "http://%s" % proxy}, timeout=self.timeout)
-                if r.status_code == requests.codes.ok:
-                    result[proxy] = r.elapsed
-                    logger.info("Valid proxy: %r, speed:%s", proxy, r.elapsed)
-
-            except Exception as e:
-                logger.error("Exception: %s", e)
+            latency = self._validate(proxy)
+            if latency:
+                result[proxy] = latency
 
         return result
+
+    def _validate(self, proxy):
+        try:
+            r = requests.get(self.target, proxies={"http": "http://%s" % proxy}, timeout=self.timeout)
+            if r.status_code == requests.codes.ok and r.text == 'true':
+                logger.info("Valid proxy: %r, latency:%s", proxy, r.elapsed)
+                return r.elapsed
+
+        except Exception as e:
+            logger.error("Exception: %s", e)
+
+        return None

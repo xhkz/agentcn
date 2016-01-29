@@ -49,6 +49,8 @@ class Site(object):
         for s in self.get():
             proxies.extend(self.parse(s))
 
+        logger.info('Get %s ip addresses from %s', len(proxies), self)
+
         return proxies
 
     def get(self, encoding=None):
@@ -78,33 +80,33 @@ class Site(object):
         raise NotImplementedError()
 
 
-# class Xici(Site):
-#     def __init__(self):
-#         """
-#         nn: 国内高匿代理
-#         nt: 国内普通代理
-#         wn: 国外高匿代理
-#         wt: 国外普通代理
-#
-#         仅获取前两页
-#         """
-#         super(Xici, self).__init__()
-#         self.urls = ['http://www.xicidaili.com/%s/%s' % (sub, str(page))
-#                      for page in range(1, 3)
-#                      for sub in ['nn', 'nt']]
-#
-#     def parse(self, soup):
-#         proxy_list = []
-#         for tr in soup.find(id='ip_list').find_all('tr')[1:]:
-#             try:
-#                 td = tr.find_all('td')
-#                 proxy = Proxy(td[2].string, td[3].string, Proxy.anonymity.get(td[5].string, 0))
-#                 proxy_list.append(proxy)
-#
-#             except Exception as e:
-#                 logger.error('Exception: %s', e)
-#
-#         return proxy_list
+class Xici(Site):
+    def __init__(self):
+        """
+        nn: 国内高匿代理
+        nt: 国内普通代理
+        wn: 国外高匿代理
+        wt: 国外普通代理
+
+        仅获取前两页
+        """
+        super(Xici, self).__init__()
+        self.urls = ['http://www.xicidaili.com/%s/%s' % (sub, str(page))
+                     for page in range(1, 3)
+                     for sub in ['nn', 'nt']]
+
+    def parse(self, soup):
+        proxy_list = []
+        for tr in soup.find(id='ip_list').find_all('tr')[1:]:
+            try:
+                td = tr.find_all('td')
+                proxy = Proxy(td[2].string, td[3].string, Proxy.anonymity.get(td[5].string, 0))
+                proxy_list.append(proxy)
+
+            except Exception as e:
+                logger.error('Exception: %s', e)
+
+        return proxy_list
 
 
 class CNproxy(Site):

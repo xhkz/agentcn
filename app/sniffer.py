@@ -20,10 +20,10 @@ class Sniffer(object):
         for level in config['anonymity']:
             proxies = self.classify().get(level, [])
 
-            logger.info('Sniffer [%s], total: %s', Proxy.anonymity.get(level), len(proxies))
+            logger.info('Validate [%s], total: %s', Proxy.anonymity.get(level), len(proxies))
             result[level] = self.validator.run(proxies)
 
-            logger.info('Sniffer [%s], valid: %s', Proxy.anonymity.get(level), len(result[level]))
+            logger.info('Validate [%s], valid: %s', Proxy.anonymity.get(level), len(result[level]))
 
         if config['save']:
             try:
