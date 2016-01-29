@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import multiprocessing
-import time
 
 import gevent
 import requests
@@ -21,71 +20,51 @@ class Validator(object):
         self.process_num = config['process_num']
         self.thread_num = config['thread_num']
 
-    def run_in_multiprocess(self, proxy_list):
-        """ 多进程 """
-        result_queue = multiprocessing.Queue()
-        proxy_partitions = self.partite_proxy(proxy_list)
+    def run(self, proxies):
+        q = multiprocessing.Queue()
+        size = len(proxies) / self.process_num + 1
+        chunks = self.slice(proxies, size)
         process = []
-        for partition in proxy_partitions:
-            p = multiprocessing.Process(target=self.process_with_gevent, args=(result_queue, partition))
+
+        for chunk in chunks:
+            p = multiprocessing.Process(target=self.proc, args=(q, chunk))
             p.start()
             process.append(p)
 
-        for p in process:
-            p.join()
-
         result = {}
         for p in process:
-            result.update(result_queue.get())
+            p.join()
+            result.update(q.get())
 
         return result
 
-    def partite_proxy(self, proxy_list):
-        """ 按process_num数对proxy_list进行分块 """
-        if len(proxy_list) == 0:
-            return []
+    def slice(self, proxies, size):
+        if proxies:
+            return [proxies[i:i + size] for i in range(0, len(proxies), size)]
 
-        result = []
-        step = len(proxy_list) / self.process_num + 1
-        for i in range(0, len(proxy_list), step):
-            result.append(proxy_list[i:i + step])
+        return []
 
-        return result
-
-    def process_with_gevent(self, result_queue, proxy_list):
-        """ 采用gevent进行处理 """
-        jobs = [gevent.spawn(self.validate_job, proxy_list) for i in range(self.thread_num)]
+    def proc(self, q, proxies):
+        jobs = [gevent.spawn(self.validate, proxies) for _ in range(self.thread_num)]
         gevent.joinall(jobs)
+
         result = {}
         for job in jobs:
             result.update(job.value)
 
-        result_queue.put(result)
+        q.put(result)
 
-    def validate_job(self, proxy_list):
+    def validate(self, proxies):
         result = {}
-        while len(proxy_list) > 0:
-            ip_port = proxy_list.pop()
-            is_valid, speed = self.validate(ip_port)
-            if is_valid:
-                result[ip_port] = speed
-                logger.info("got an valid ip: %s, time:%s", ip_port, speed)
+        while len(proxies) > 0:
+            proxy = proxies.pop()
+            try:
+                r = requests.get(self.target, proxies={"http": "http://%s" % proxy}, timeout=self.timeout)
+                if r.status_code == requests.codes.ok:
+                    result[proxy] = r.elapsed
+                    logger.info("Valid proxy: %r, speed:%s", proxy, r.elapsed)
+
+            except Exception as e:
+                logger.error("Exception: %s", e)
 
         return result
-
-    def validate(self, ip_port):
-        proxies = {
-            "http": "http://%s" % ip_port,
-        }
-        try:
-            start = time.time()
-            r = requests.get(self.target, proxies=proxies, timeout=self.timeout)
-            if r.status_code == requests.codes.ok and r.text == 'true':
-                speed = time.time() - start
-                logger.debug('validating %s, success, time:%ss', ip_port, speed)
-                return True, speed
-
-        except Exception as e:
-            logger.debug("validating %s, fail: %s", ip_port, e)
-
-        return False, 0

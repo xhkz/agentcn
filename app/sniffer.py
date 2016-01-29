@@ -18,10 +18,10 @@ class Sniffer(object):
     def verify(self):
         result = {}
         for level in config['anonymity']:
-            proxies = ['%s:%s' % (p.ip, p.port) for p in self.classify().get(level, [])]
+            proxies = self.classify().get(level, [])
 
             logger.info('Sniffer [%s], total: %s', Proxy.anonymity.get(level), len(proxies))
-            result[level] = self.validator.run_in_multiprocess(proxies)
+            result[level] = self.validator.run(proxies)
 
             logger.info('Sniffer [%s], valid: %s', Proxy.anonymity.get(level), len(result[level]))
 
@@ -34,7 +34,8 @@ class Sniffer(object):
     def save(self, result):
         for level, proxies in result.iteritems():
             with open('./out/%s-%s.txt' % (app_name, level), 'wb') as f:
-                f.writelines(['%s\t%s\n' % (line[0], line[1]) for line in sorted(proxies.items(), key=operator.itemgetter(1))])
+                f.writelines(
+                    ['%s\t%s\n' % (line[0], line[1]) for line in sorted(proxies.items(), key=operator.itemgetter(1))])
 
     def classify(self):
         group = {}

@@ -25,6 +25,9 @@ class Proxy(object):
         self.port = port
         self.anonymity = anonymity
 
+    def __str__(self):
+        return '%s:%s' % (self.ip, self.port)
+
     def __repr__(self):
         return '[%s]%s:%s' % (self.anonymity, self.ip, self.port)
 
