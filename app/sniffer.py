@@ -4,7 +4,7 @@
 import operator
 from itertools import groupby
 
-from app import logger, app_name
+from app import logger
 from proxy import Proxy
 from settings import config
 from validator import Validator
@@ -27,15 +27,17 @@ class Sniffer(object):
 
         if config['save']:
             try:
-                self.save(result)
+                self.save(config['save'], result)
             except Exception as e:
                 logger.error("Exception: %s", e)
 
-    def save(self, result):
-        for level, proxies in result.iteritems():
-            with open('./out/%s-%s.txt' % (app_name, level), 'wb') as f:
+    def save(self, name, result):
+        with open('./out/%s' % name, 'wb') as f:
+            for level, proxies in result.iteritems():
                 f.writelines(
-                    ['%s\t%s\n' % (line[0], line[1]) for line in sorted(proxies.items(), key=operator.itemgetter(1))])
+                    ['[%s]%s\t%s\n' % (level, line[0], line[1])
+                     for line in sorted(proxies.items(), key=operator.itemgetter(1))]
+                )
 
     def classify(self):
         group = {}

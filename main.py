@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 from gevent import monkey
 
+monkey.patch_all()
+
 from app.crawler import Crawler
 from app.sniffer import Sniffer
-
-monkey.patch_all()
 
 
 def main():

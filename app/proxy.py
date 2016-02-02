@@ -11,12 +11,12 @@ from app import logger
 
 class Proxy(object):
     anonymity = {
-        u'透明': 1,
+        u'透明': 3,
         u'匿名': 2,
-        u'高匿': 3,
-        1: u'透明',
+        u'高匿': 1,
+        3: u'透明',
         2: u'匿名',
-        3: u'高匿',
+        1: u'高匿',
         0: u'未知'
     }
 
