@@ -100,7 +100,7 @@ class Xici(Site):
         for tr in soup.find(id='ip_list').find_all('tr')[1:]:
             try:
                 td = tr.find_all('td')
-                proxy = Proxy(td[2].string, td[3].string, Proxy.anonymity.get(td[5].string, 0))
+                proxy = Proxy(td[1].string, td[2].string, Proxy.anonymity.get(td[4].string, 0))
                 proxy_list.append(proxy)
 
             except Exception as e:
